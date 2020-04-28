@@ -1,0 +1,633 @@
+Chaos Engineering - A Cloud Native Solution for Chaos Engineering using ChoasToolkit & Istio
+
+Prerequisites
+
+You need a Google Cloud Platform account with billing enabled. Visit the Google Developers Console for more details.
+
+Sign up for a GCP Account via : https://cloud.google.com/free
+
+Install gcloud as necessary. gcloud can be installed as a part of the Google Cloud SDK.
+
+Enable the Compute Engine Instance Group Manager API in the Google Cloud developers console.
+
+Make sure that gcloud is set to use the Google Cloud Platform project you want. You can check the current project using gcloud config list project and change it via gcloud config set project <project-id>.
+
+Make sure you have credentials for GCloud by running gcloud auth login.
+
+(Optional) In order to make API calls against GCE, you must also run gcloud auth application-default login.
+
+Make sure you can start up a GCE VM from the command line. At least make sure you can do the Create an instance part of the GCE Quickstart.
+
+Make sure you can SSH into the VM without interactive prompts. See the Log in to the instance part of the GCE Quickstart.
+
+Create a GKE Cluster on GCP
+
+To create a Kubernetes cluster, follow the instructions below:
+
+Run the commands below. Remember to replace MY-KUBERNETES-CLUSTER with the name you chose for your cluster, and use a different subnetwork name if you don’t wish to use the default one.
+
+gcloud container clusters create MY_KUBERNETES_CLUSTER \ --subnetwork default
+
+NOTE: The number of nodes created by default in a Kubernetes cluster is 3. You can add additional arguments to set up some parameters such as a specific number of nodes or the disk size:
+
+--num-nodes N
+--disk-size N
+
+Once the cluster has been created you will see the information related to it:
+
+Creating cluster my-kubernetes-cluster in asia-south1-b... Cluster is being health-checked (master is healthy)...done. 
+
+Created [https://container.googleapis.com/v1/projects/wipro-sysassure-poc/zones/asia-south1-b/clusters/my-kubernetes-cluster]. 
+
+To inspect the contents of your cluster, go to: https://console.cloud.google.com/kubernetes/workload_/gcloud/asia-south1-b/my-kubernetes-cluster?project=wipro-sysassure-poc kubeconfig entry generated for my-kubernetes-cluster. NAME LOCATION MASTER_VERSION MASTER_IP MACHINE_TYPE NODE_VERSION NUM_NODES STATUS my-kubernetes-cluster asia-south1-b 1.14.10-gke.17 35.200.184.57 n1-standard-1 1.14.10-gke.17 3 RUNNING
+
+The new cluster will also appear in the Container Engine -> Container cluster section within Google Cloud Platform:
+
+Create Kubernetes cluster
+
+Configure the compute zone. Remember that this zone must match the one you indicated in Step 1. Replace the COMPUTE_ZONE placeholder with the correct value.
+
+gcloud config set compute/zone  COMPUTE_ZONE
+
+Get your cluster credentials:
+
+gcloud container clusters get-credentials MY_KUBERNETES_CLUSTER
+
+Authenticate your cluster:
+
+gcloud auth application-default login
+
+Install The Kubectl Command-Line Tool
+
+In order to start working on a Kubernetes cluster, it is necessary to install the Kubernetes command line (kubectl). Follow these steps to install the kubectl CLI:
+
+Execute the following commands to install the kubectl CLI. OS_DISTRIBUTION is a placeholder for the binary distribution of kubectl, remember to replace it with the corresponding distribution for your Operating System (OS).
+
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/OS_DISTRIBUTION/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin/kubectl 
+
+Once the kubectl CLI is installed, you can obtain information about the current version with the kubectl version command.
+
+NOTE: You can also install kubectl by using the sudo apt-get install kubectl command.
+
+Check that kubectl is correctly installed and configured by running the kubectl cluster-info command:
+
+kubectl cluster-info
+
+NOTE: The kubectl cluster-info command shows the IP addresses of the Kubernetes node master and its services.
+
+Get source code for Go-Demo-8 Application demo
+
+Clone the repo to your local development machine
+
+git clone https://github.com/vfarcic/go-demo-8.git
+cd go-demo-8
+
+Deploy Application Service demo
+
+Follow the steps shown in below steps to setup the application demo on GKE cluster
+
+ # Source: https://gist.github.com/419032bc714cc31cd2f72d45ebef07c7
+
+######################
+# Creating A Cluster #
+######################
+# GKE: https://gist.github.com/2351032b5031ba3420d2fb9a1c2abd7e (gke.sh)
+
+#############################
+# Deploying The Application #
+#############################
+git clone https://github.com/vfarcic/go-demo-8.git
+cd go-demo-8
+git pull
+kubectl create namespace go-demo-8
+
+cat k8s/terminate-pods/pod.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/terminate-pods/pod.yaml
+
+#################################
+# Discovering Kubernetes Plugin #
+#################################
+Install chaostoolkit - https://docs.chaostoolkit.org/reference/usage/install/
+
+pip install -U chaostoolkit-kubernetes   
+chaos discover chaostoolkit-kubernetes
+cat discovery.json
+
+Now cluster is ready with the go-demo-8 application hosted on GKE cluster. 
+
+ChaosToolKit : Getting Started with Experiments
+
+Chaos Experiments 
+
+Areas of Failure Simulation
+
+Destroying Application Instances 
+
+Defining Steady State, Hypothesis, Actions, Fault Tolerance
+
+Experimenting with Application Availability 
+
+App Health Validations, HA Validation, App dependency Validation
+
+Obstructing & Destroying Network - ISTIO (Service Mesh)
+
+Aborting Network Requests, Rolling Back Abort Failures, Making The App Resilient To Partial Network Failures, Increasing Network Latency, Aborting All Requests, Simulating Denial Of Service Attacks, Running Denial Of Service Attacks
+
+Draining & Deleting Nodes 
+
+Draining Worker Nodes, Making Nodes Drainable, Deleteing Worker Nodes, Destroying Cluster Zones, 
+
+Create Chaos Experiments Reports 
+
+An Experiment Report, multi Experiment Report, ( Json, Pdf )
+
+Running Experiments inside K8s Cluster 
+
+All Exp in One shot, Scheduling, Failed Scheduling, Selective Notifications  
+
+Dashboards for Experiments
+
+Grafana, Kiali, Promenthus -  Disrupting network traffic, Random Instance Terminate, 
+
+[A] Destroying Application Instances 
+
+In this Experiment we will build and application by defining the Steady State with its hypothesis for a probe. Application instance destruction is simulated which will be shown as how the instances are deleted and probe is satisfied with introduction of pause, phases and conditions in turn making this application Fault-Tolerant.
+
+Below are the steps for the Experiment, at end the experiment is deleted ::
+
+#####################################
+# Terminating Application Instances #
+#####################################
+
+cat chaos/terminate-pod.yaml
+chaos run chaos/terminate-pod.yaml
+echo $?
+kubectl --namespace go-demo-8 get pods
+
+###########################
+# Steady State Hypothesis #
+###########################
+
+cat chaos/terminate-pod-ssh.yaml
+diff chaos/terminate-pod.yaml chaos/terminate-pod-ssh.yaml
+chaos run chaos/terminate-pod-ssh.yaml
+echo $?
+kubectl --namespace go-demo-8 apply --filename k8s/terminate-pods/pod.yaml
+chaos run chaos/terminate-pod-ssh.yaml
+echo $?
+kubectl --namespace go-demo-8 apply --filename k8s/terminate-pods/pod.yaml
+
+#########################
+# Pausing After Actions #
+#########################
+
+cat chaos/terminate-pod-pause.yaml
+diff chaos/terminate-pod-ssh.yaml chaos/terminate-pod-pause.yaml
+chaos run chaos/terminate-pod-pause.yaml
+echo $?
+kubectl --namespace go-demo-8 apply --filename k8s/terminate-pods/pod.yaml
+
+#########################
+# Phases And Conditions #
+#########################
+
+kubectl --namespace go-demo-8 describe pod go-demo-8
+cat chaos/terminate-pod-phase.yaml
+diff chaos/terminate-pod-pause.yaml chaos/terminate-pod-phase.yaml
+chaos run chaos/terminate-pod-phase.yaml
+echo $?
+
+kubectl --namespace go-demo-8 logs go-demo-8
+kubectl --namespace go-demo-8  apply --filename k8s/db
+kubectl --namespace go-demo-8 rollout status deployment go-demo-8-db
+kubectl --namespace go-demo-8 get pods
+
+# Repeat the previous command until the `go-demo-8` Pod `STATUS` is `Running`
+
+chaos run chaos/terminate-pod-phase.yaml
+echo $?
+
+#################################
+# Making The App Fault-Tolerant #
+#################################
+
+cat k8s/terminate-pods/deployment.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/terminate-pods/deployment.yaml
+kubectl --namespace go-demo-8 rollout status deployment go-demo-8
+chaos run chaos/terminate-pod-phase.yaml
+
+##############################
+# Destroying What We Created #
+##############################
+
+cd ..
+kubectl delete namespace go-demo-8
+
+[B] Experimenting with Application Availability 
+
+In this Experiment we will build and application by defining the Steady State with its hypothesis for a probe. Application instance destruction is simulated which will be shown as how the instances are deleted and probe is satisfied with introduction of pause, phases and conditions in turn making this application Fault-Tolerant.
+
+Below are the steps for the Experiment, at end the experiment is deleted ::
+
+#############################
+# Deploying The Application #
+#############################
+
+cd go-demo-8
+
+git pull
+
+kubectl create namespace go-demo-8
+
+cat k8s/terminate-pods/app/*
+
+kubectl --namespace go-demo-8 \
+    apply --filename k8s/terminate-pods/app
+
+kubectl --namespace go-demo-8 \
+    rollout status deployment go-demo-8
+
+##############################
+# Validating The Application #
+##############################
+
+kubectl --namespace go-demo-8 \
+    get ingress
+
+kubectl apply \
+    --filename https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.27.0/deploy/static/mandatory.yaml
+
+# If Minikube
+minikube addons enable ingress
+
+# If Docker Desktop, GKE, or AKS
+kubectl apply \
+    --filename https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.27.0/deploy/static/provider/cloud-generic.yaml
+
+# If EKS
+kubectl apply \
+    --filename https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.27.0/deploy/static/provider/aws/service-l4.yaml
+
+# If EKS
+kubectl apply \
+    --filename https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.27.0/deploy/static/provider/aws/patch-configmap-l4.yaml
+
+# If Minikube
+export INGRESS_HOST=$(minikube ip)
+
+# If Docker Desktop or EKS
+export INGRESS_HOST=$(kubectl \
+    --namespace ingress-nginx \
+    get service ingress-nginx \
+    --output jsonpath="{.status.loadBalancer.ingress[0].hostname}")
+
+# If GKE or AKS
+export INGRESS_HOST=$(kubectl \
+    --namespace ingress-nginx \
+    get service ingress-nginx \
+    --output jsonpath="{.status.loadBalancer.ingress[0].ip}")
+
+echo $INGRESS_HOST
+
+# Repeat the `export` command if the output is empty
+
+cat k8s/health/ingress.yaml
+
+kubectl --namespace go-demo-8 \
+    apply --filename k8s/health/ingress.yaml
+
+curl -H "Host: go-demo-8.acme.com" \
+    "http://$INGRESS_HOST"
+
+#################################
+# Validating Application Health #
+#################################
+
+cat chaos/health.yaml
+
+chaos run chaos/health.yaml
+
+kubectl --namespace go-demo-8 \
+    get pods
+
+cat chaos/health-pause.yaml
+
+diff chaos/health.yaml \
+    chaos/health-pause.yaml
+
+chaos run chaos/health-pause.yaml
+
+kubectl --namespace go-demo-8 \
+    get pods
+
+#######################################
+# Validating Application Availability #
+#######################################
+
+cat chaos/health-http.yaml
+
+diff chaos/health-pause.yaml \
+    chaos/health-http.yaml
+
+chaos run chaos/health-http.yaml
+
+cat k8s/health/hpa.yaml
+
+kubectl apply --namespace go-demo-8 \
+    --filename k8s/health/hpa.yaml
+
+kubectl --namespace go-demo-8 \
+    get hpa
+
+# Repeat if the number of replicas is not `2`
+
+chaos run chaos/health-http.yaml
+
+########################################
+# Terminating Application Dependencies #
+########################################
+
+cat chaos/health-db.yaml
+
+diff chaos/health-http.yaml \
+    chaos/health-db.yaml
+
+chaos run chaos/health-db.yaml
+
+##############################
+# Destroying What We Created #
+##############################
+
+cd ..
+
+kubectl delete namespace go-demo-8
+
+[C] Obstructing & Destroying Network - ISTIO (Service Mesh)
+
+In this Experiment we will build and application by defining the Steady State with its hypothesis for a probe. Istio Service mesh will be installed for all networking related experiments which will be tested for  Aborting Network Requests, Rolling Back Abort Failures, Making The App Resilient To Partial Network Failures, Increasing Network Latency, Aborting All Requests, Simulating Denial Of Service Attacks, Running Denial Of Service Attacks,  for the application is simulated which will be shown as how the application is under probe and is satisfied with introduction of the ISTIO for hypothesis.
+
+Below are the steps for the Experiment, at end the experiment is deleted ::
+
+#################################
+# Installing Istio Service Mesh #
+#################################
+
+# If Docker Desktop and if kept the cluster from the previous section
+kubectl delete --filename https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.27.0/deploy/static/provider/cloud-generic.yaml
+
+# If Docker Desktop and if kept the cluster from the previous section
+kubectl delete --filename https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.27.0/deploy/static/mandatory.yaml
+
+istioctl manifest apply --skip-confirmation
+kubectl --namespace istio-system get service istio-ingressgateway
+
+# Confirm that `EXTERNAL-IP` is not `pending`, unless using Minikube. Repeat if it is.
+# If Docker Desktop
+export INGRESS_HOST=127.0.0.1
+
+# If GKE or AKS
+export INGRESS_HOST=$(kubectl \
+    --namespace istio-system \
+    get service istio-ingressgateway \
+    --output jsonpath="{.status.loadBalancer.ingress[0].ip}")
+
+echo $INGRESS_HOST
+
+#####################
+# Deploying The App #
+#####################
+
+cd go-demo-8
+git pull
+kubectl create namespace go-demo-8
+kubectl label namespace go-demo-8 istio-injection=enabled
+
+cat k8s/health/app/*
+kubectl --namespace go-demo-8 apply --filename k8s/health/app/
+kubectl --namespace go-demo-8 rollout status deployment go-demo-8
+kubectl --namespace go-demo-8 get pods
+
+cat k8s/network/istio.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/network/istio.yaml
+cat k8s/network/repeater/*
+kubectl --namespace go-demo-8 apply --filename k8s/network/repeater
+kubectl --namespace go-demo-8 rollout status deployment repeater
+curl -H "Host: repeater.acme.com" \
+    "http://$INGRESS_HOST?addr=http://go-demo-8"
+
+############################
+# Discovering Istio Plugin #
+############################
+    
+pip install -U chaostoolkit-istio
+chaos discover chaostoolkit-istio
+cat discovery.json
+
+#############################
+# Aborting Network Requests #
+#############################
+
+cat chaos/network.yaml
+chaos run chaos/network.yaml
+
+###############################
+# Rolling Back Abort Failures #
+###############################
+
+for i in {1..10}; do 
+    curl -H "Host: repeater.acme.com" \
+        "http://$INGRESS_HOST?addr=http://go-demo-8"
+    echo ""
+done
+
+kubectl --namespace go-demo-8 describe virtualservice go-demo-8
+kubectl --namespace go-demo-8 apply --filename k8s/network/istio.yaml
+kubectl --namespace go-demo-8 describe virtualservice go-demo-8
+cat chaos/network-rollback.yaml
+diff chaos/network.yaml chaos/network-rollback.yaml
+chaos run chaos/network-rollback.yaml
+
+for i in {1..10}; do 
+    curl -H "Host: repeater.acme.com" \
+        "http://$INGRESS_HOST?addr=http://go-demo-8"
+done
+
+kubectl --namespace go-demo-8 describe virtualservice go-demo-8
+
+########################################################
+# Making The App Resilient To Partial Network Failures #
+########################################################
+
+cat k8s/network/istio-repeater.yaml
+# If Windows, open the address manually in your favorite browser
+open https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on
+kubectl --namespace go-demo-8 apply --filename k8s/network/istio-repeater.yaml
+chaos run chaos/network-rollback.yaml
+
+##############################
+# Increasing Network Latency #
+##############################
+
+cat chaos/network-delay.yaml
+diff chaos/network-rollback.yaml chaos/network-delay.yaml
+chaos run chaos/network-delay.yaml
+cat k8s/network/istio-delay.yaml
+diff k8s/network/istio-repeater.yaml k8s/network/istio-delay.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/network/istio-delay.yaml
+chaos run chaos/network-delay.yaml
+
+# It might fail if (randomly) too many requests fall into delay or abort state
+
+#########################
+# Aborting All Requests #
+#########################
+
+cat chaos/network-abort-100.yaml
+diff chaos/network-rollback.yaml chaos/network-abort-100.yaml
+chaos run chaos/network-abort-100.yaml
+
+########################################
+# Simulating Denial Of Service Attacks #
+########################################
+
+kubectl --namespace go-demo-8 run siege --image yokogawa/siege --generator run-pod/v1 -it --rm -- --concurrent 50 --time 20S "http://go-demo-8"
+cat main.go
+kubectl --namespace go-demo-8 run siege --image yokogawa/siege --generator run-pod/v1 -it --rm -- --concurrent 50 --time 20S "http://go-demo-8/limiter"
+
+#####################################
+# Running Denial Of Service Attacks #
+#####################################
+
+cat chaos/network-dos.yaml
+chaos run chaos/network-dos.yaml
+cat chaostoolkit.log
+
+##############################
+# Destroying What We Created #
+##############################
+
+cd ..
+kubectl delete namespace go-demo-8
+
+[D] Running Experiments inside K8s Cluster 
+
+In this Experiment we will build and application by defining the Steady State with its hypothesis for a probe. Application experiments are created in Single Shot from terminate app instance, terminate app pod, network delay, network partial abort, network abort, abort failures, removing abort failures, and few others are tested towards their steady states and hypothesis are simulated based on scheduling and their notifications based on selective experiments notifications to subscribed channels or other modes.
+
+Below are the steps for the Experiment, at end the experiment is deleted ::
+
+_________________________ START __________________________________
+
+# NOTE: Remember to declare `INGRESS_HOST`
+
+#####################
+# Deploying The App #
+#####################
+
+cd go-demo-8
+git pull
+kubectl create namespace go-demo-8
+kubectl label namespace go-demo-8 istio-injection=enabled
+kubectl --namespace go-demo-8 apply --filename k8s/app-full
+kubectl --namespace go-demo-8 rollout status deployment go-demo-8
+curl -H "Host: repeater.acme.com" "http://$INGRESS_HOST?addr=http://go-demo-8"
+
+# NOTE: If `Connection refused`, wait for a few moments and repeat the `curl` command
+
+##########################################
+# Setting Up Chaos Toolkit In Kubernetes #
+##########################################
+
+cat k8s/chaos/experiments.yaml
+
+# NOTE: We could create a ConfigMap through a command and include all the files. But that's not GitOps.
+kubectl --namespace go-demo-8 apply --filename k8s/chaos/experiments.yaml
+kubectl --namespace go-demo-8 describe configmap chaostoolkit-experiments
+cat k8s/chaos/sa.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/chaos/sa.yaml
+
+################################
+# Running One-Shot Experiments #
+################################
+
+cat k8s/chaos/once.yaml
+# If Windows, open the address in your favorite browser manually
+open "https://github.com/vfarcic/chaostoolkit-container-image"
+kubectl --namespace go-demo-8 apply --filename k8s/chaos/once.yaml
+kubectl --namespace go-demo-8 get pods --selector app=go-demo-8-chaos
+
+# Repeat the previous command until `STATUS` is `Completed`
+kubectl --namespace go-demo-8 logs --selector app=go-demo-8-chaos --tail -1
+kubectl --namespace go-demo-8 delete --filename k8s/chaos/once.yaml
+
+#################################
+# Running Scheduled Experiments #
+#################################
+
+cat k8s/chaos/periodic.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/chaos/periodic.yaml
+kubectl --namespace go-demo-8 get cronjobs
+
+# Repeat the previous command until `LAST SCHEDULE` is NOT `<none>`
+kubectl --namespace go-demo-8 get jobs
+
+# Repeat the previous command until `COMPLETIONS` is `1/1`
+kubectl --namespace go-demo-8 get pods
+
+########################################
+# Running Failed Scheduled Experiments #
+########################################
+
+kubectl --namespace go-demo-8 delete deployment go-demo-8
+kubectl --namespace go-demo-8 get pods --selector app=go-demo-8-chaos
+
+# Repeat the previous command until the new Pod `STATUS` is `Error`
+
+# You can see the logs of the failed Pod
+kubectl get pv
+
+# We could generate and extract a report based on journal files in that PersistentVolume
+kubectl --namespace go-demo-8 apply --filename k8s/app-full
+kubectl --namespace go-demo-8 rollout status deployment go-demo-8
+
+####################################
+# Sending Experiment Notifications #
+####################################
+
+# We could send a notification to any HTTP endpoint or to Slack
+
+# Join the DevOps20 (http://slack.devops20toolkit.com/) Slack workspace
+cat k8s/chaos/settings.yaml
+
+# NOTE: Might want to replace with your own Slack token
+
+cat k8s/chaos/settings.yaml | sed -e "s|@||g" | kubectl --namespace go-demo-8 apply --filename -
+cat k8s/chaos/periodic-slack.yaml
+diff k8s/chaos/periodic.yaml k8s/chaos/periodic-slack.yaml
+kubectl --namespace go-demo-8 apply --filename k8s/chaos/periodic-slack.yaml
+
+# Watch the #tests channel in Slack (join it if you haven't already). You might see notifications from others.
+
+kubectl --namespace go-demo-8 get pods --selector app=go-demo-8-chaos
+
+###################################
+# Sending Selective Notifications #
+###################################
+
+cat k8s/chaos/settings-failure.yaml
+diff k8s/chaos/settings.yaml k8s/chaos/settings-failure.yaml
+cat k8s/chaos/settings-failure.yaml | sed -e "s|@||g" | kubectl --namespace go-demo-8  apply --filename -
+kubectl --namespace go-demo-8 get pods --selector app=go-demo-8-chaos
+
+# Observe that there were no new notification in Slack (not from you at least)
+  
+kubectl --namespace go-demo-8 delete deployment go-demo-8
+
+# Watch the #tests channel in Slack.
+
+##############################
+# Destroying What We Created #
+##############################
+cd ..
+kubectl delete namespace go-demo-8
